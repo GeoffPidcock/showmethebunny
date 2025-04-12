@@ -1,0 +1,6 @@
+gradio
+llama-index
+pandas
+python-dotenv
+openai
+modal
