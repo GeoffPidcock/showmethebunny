@@ -1,7 +1,7 @@
 # enrich_showbags.py
 
-# This script uses a baseten hosted  to enrich the showbags dataset 
-## with descriptions of the images.
+# This script uses a baseten hosted model to enrich the showbags dataset 
+## with descriptions of the images, so that they can be easier to search through RAG.
 # It uses the Mistral 3.1 small model.
 # It saves the enriched data to a new CSV file.
 # It also saves intermediate results every 5 images to avoid losing progress.
