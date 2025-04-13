@@ -295,71 +295,56 @@ def log_vote(showbag_id: str, vote_type: str):
     except Exception as e:
         print(f"Error logging vote: {e}")
 
-def search_and_display(search_query: str, max_price: float, df: pd.DataFrame):
-    """Filters DataFrame, returns gallery data, message, and ID of top result."""
-    if df is None: return [], "Error: Showbag data not loaded.", None
-    if app_data["index"] is None: return [], "Error: Showbag index not loaded.", None
+def search_and_display(search_query: str, max_price: float, df: pd.DataFrame, cached_ids: List[str] | None = None):
+    """Filters DataFrame based on semantic search (if query provided), price, and optional cached IDs."""
+    if df is None: return [], "Error: Showbag data not loaded.", None, None # gallery_data, msg, top_id, new_ids
+    if app_data["index"] is None: return [], "Error: Showbag index not loaded.", None, None
 
-    # Define the similarity threshold
     SIMILARITY_THRESHOLD = 0.75 
-
-    # Ensure consistent types for comparison
     df['price_numeric'] = pd.to_numeric(df['price_numeric'], errors='coerce')
-    df['id'] = df['id'].fillna('').astype(str) 
+    df['id'] = df['id'].fillna('').astype(str)
 
     working_df = df.copy()
     search_performed = False
-    top_result_id = None # Initialize
+    top_result_id = None
+    current_ordered_ids = None # Holds IDs used for filtering, returned at end
 
-    # --- Semantic Search (if query provided) ---
+    # --- Semantic Search (only if search_query is provided) ---
     if search_query and search_query.strip():
         search_performed = True
         try:
-            retriever = VectorIndexRetriever(
-                index=app_data["index"],
-                similarity_top_k=50, 
-            )
+            retriever = VectorIndexRetriever(index=app_data["index"], similarity_top_k=50)
             retrieved_nodes_with_scores = retriever.retrieve(search_query)
-            
-            # Filter nodes based on the similarity threshold
-            high_similarity_nodes = [
-                node for node in retrieved_nodes_with_scores 
-                if node.score >= SIMILARITY_THRESHOLD
-            ]
-            
-            # Get IDs *in order* from the high-similarity nodes
-            # Keep only unique IDs while preserving the order from high_similarity_nodes
-            ordered_ids = list(dict.fromkeys([str(node.metadata['id']) for node in high_similarity_nodes if 'id' in node.metadata]))
-            
-            # Debugging print (optional)
-            # print(f"Retrieved {len(retrieved_nodes_with_scores)} nodes, {len(high_similarity_nodes)} met threshold, {len(ordered_ids)} unique ordered IDs.")
-
-            if not ordered_ids:
-                 working_df = pd.DataFrame(columns=df.columns) # Empty dataframe
-            else:
-                 # Filter DataFrame based on high-similarity IDs
-                 working_df = working_df[working_df['id'].isin(ordered_ids)]
-                 
-                 # --- Reorder based on semantic similarity --- 
-                 if not working_df.empty:
-                     working_df['id'] = pd.Categorical(working_df['id'], categories=ordered_ids, ordered=True)
-                     working_df = working_df.sort_values('id')
-                     # top_result_id = working_df.iloc[0]['id'] # Get ID of the top row *before* price filter
-                 # --- End Reordering ---
-
+            high_similarity_nodes = [n for n in retrieved_nodes_with_scores if n.score >= SIMILARITY_THRESHOLD]
+            # Get NEW ordered IDs from this search
+            current_ordered_ids = list(dict.fromkeys([str(node.metadata['id']) for node in high_similarity_nodes if 'id' in node.metadata]))
         except Exception as e:
             print(f"Error during semantic search: {e}")
-            return [], f"Error during search: {e}", None
-    # --- End Semantic Search ---
+            # On error, maybe revert to full list or return error? Clear IDs for now.
+            current_ordered_ids = None 
+            return [], f"Error during search: {e}", None, current_ordered_ids
+    else:
+        # No search query provided, use cached IDs if available
+        current_ordered_ids = cached_ids
+    
+    # --- Filtering based on IDs (either new search or cached) ---
+    if current_ordered_ids: 
+        search_performed = True # Mark as filtered if IDs were used
+        working_df = working_df[working_df['id'].isin(current_ordered_ids)]
+        # Reapply ordering based on IDs used (new or cached)
+        if not working_df.empty:
+             working_df['id'] = pd.Categorical(working_df['id'], categories=current_ordered_ids, ordered=True)
+             working_df = working_df.sort_values('id')
+    # else: No query and no cached IDs, proceed with full dataframe
 
     # --- Price Filter ---
     final_filtered_df = working_df[working_df['price_numeric'] <= max_price].copy()
 
-    # Get the ID of the top result *after* price filtering
+    # Get top result ID after price filtering
     if not final_filtered_df.empty:
         top_result_id = final_filtered_df.iloc[0]['id']
     
-    # --- Format for Gallery --- 
+    # --- Format for Gallery & Message ---
     gallery_data = []
     for _, row in final_filtered_df.iterrows(): 
         caption = f"{row.get('name', 'N/A')} - ${row.get('price_numeric', 'N/A'):.2f}"
@@ -370,18 +355,19 @@ def search_and_display(search_query: str, max_price: float, df: pd.DataFrame):
     num_results = len(gallery_data)
     if num_results > 0:
         if search_performed:
-            message = f"Found {num_results} showbags matching '{search_query}' (and price filter)."
+             query_part = f" matching '{search_query}'" if (search_query and search_query.strip()) else " from last search" 
+             message = f"Found {num_results} showbags{query_part} (and price filter)."
         else:
-            message = f"Showing {num_results} showbags based on the price filter."
+             message = f"Showing {num_results} showbags based on the price filter."
     else:
         if search_performed:
-            message = f"No showbags found matching '{search_query}' and the price filter."
+            query_part = f" matching '{search_query}'" if (search_query and search_query.strip()) else " from last search" 
+            message = f"No showbags found{query_part} and the price filter."
         else:
-            # This case should be rare unless all bags exceed max_price
             message = "No showbags found within the selected price range."
 
-    # Return gallery data, message, and the ID of the top result (or None)
-    return gallery_data, message, top_result_id
+    # Return gallery data, message, top_id, and the IDs used for filtering (new or cached or None)
+    return gallery_data, message, top_result_id, current_ordered_ids
 
 def get_selected_showbag_info(evt: gr.SelectData, df: pd.DataFrame):
     """Get the ID and display info of the selected showbag based on the gallery selection event."""
@@ -575,12 +561,14 @@ def build_ui(df, index):
 
         # State to potentially hold the ID of the top search result for auto-selection attempt
         top_result_id_state = gr.State(value=None)
+        last_search_ids_state = gr.State(value=None) # State for cached IDs
 
         # --- Event Handling ---
-        def update_gallery(query, price):
-            gallery_data, msg, top_id = search_and_display(query, price, df)
-            # Clear selection details & store top ID
-            return gallery_data, msg, "Click a showbag image above to see details.", None, "", top_id
+        # Wrapper for search_and_display call
+        def update_gallery_wrapper(query, price, cached_ids):
+            gallery_data, msg, top_id, new_ids = search_and_display(query, price, df, cached_ids)
+            # Clear selection details & update states
+            return gallery_data, msg, "Click a showbag image above to see details.", None, "", top_id, new_ids
         
         def update_selected_details(evt: gr.SelectData):
             details, showbag_id = get_selected_showbag_info(evt, df)
@@ -595,17 +583,19 @@ def build_ui(df, index):
             return "\n".join(shortlist) if shortlist else "Like showbags to add them here!"
 
         # Connect search triggers
-        search_box.submit(fn=update_gallery, 
-                           inputs=[search_box, price_slider], 
-                           outputs=[gallery, status_message, selected_info, selected_showbag_id_state, vote_confirm_message, top_result_id_state])
-        search_button.click(fn=update_gallery, 
-                            inputs=[search_box, price_slider], 
-                            outputs=[gallery, status_message, selected_info, selected_showbag_id_state, vote_confirm_message, top_result_id_state])
+        search_box.submit(fn=update_gallery_wrapper, 
+                           inputs=[search_box, price_slider, last_search_ids_state], # Add cached_ids input
+                           # Update last_search_ids_state in output
+                           outputs=[gallery, status_message, selected_info, selected_showbag_id_state, vote_confirm_message, top_result_id_state, last_search_ids_state]) 
+        search_button.click(fn=update_gallery_wrapper, 
+                            inputs=[search_box, price_slider, last_search_ids_state],
+                            outputs=[gallery, status_message, selected_info, selected_showbag_id_state, vote_confirm_message, top_result_id_state, last_search_ids_state])
 
-        # Connect slider release
-        price_slider.release(fn=update_gallery, 
-                             inputs=[search_box, price_slider], 
-                             outputs=[gallery, status_message, selected_info, selected_showbag_id_state, vote_confirm_message, top_result_id_state])
+        # Connect slider release - Triggered only by price change, so pass EMPTY query
+        price_slider.release(fn=update_gallery_wrapper, 
+                             # Pass empty query, current price, and cached IDs
+                             inputs=[gr.State(""), price_slider, last_search_ids_state], 
+                             outputs=[gallery, status_message, selected_info, selected_showbag_id_state, vote_confirm_message, top_result_id_state, last_search_ids_state]) # Update cached IDs (should be unchanged)
         
         # Connect slider change event to update its label
         price_slider.change(fn=update_slider_label, inputs=[price_slider], outputs=[price_slider])
@@ -630,31 +620,22 @@ def build_ui(df, index):
 
         # Initial load - Final corrected wrapper function
         def initial_load_wrapper():
-            # Call search_and_display directly to get initial gallery state
-            gallery_data, msg, top_id = search_and_display('', max_price, df) # Use standard empty string
-            
-            # Get initial shortlist text (empty)
+            # Call search_and_display directly (no cached IDs initially)
+            gallery_data, msg, top_id, initial_ids = search_and_display('', max_price, df, None) 
             shortlist_text = update_shortlist_display([])
-            
-            # Define other initial states with standard Python strings
-            initial_selected_info = 'Click a showbag image above to see details.' # Use standard quotes
+            initial_selected_info = 'Click a showbag image above to see details.'
             initial_selected_id = None
-            initial_vote_confirm = '' # Use standard quotes for empty string
-            
-            # Return the 7 values directly as a standard tuple 
+            initial_vote_confirm = ''
+            # Return values matching outputs list (now 8 items)
             return (
-                gallery_data, 
-                msg, 
-                initial_selected_info, 
-                initial_selected_id, 
-                initial_vote_confirm, 
-                top_id, 
-                shortlist_text
+                gallery_data, msg, initial_selected_info, initial_selected_id, 
+                initial_vote_confirm, top_id, initial_ids, shortlist_text 
             )
 
         app.load(fn=initial_load_wrapper, 
                  inputs=None, 
-                 outputs=[gallery, status_message, selected_info, selected_showbag_id_state, vote_confirm_message, top_result_id_state, shortlist_display])
+                 # Add last_search_ids_state to outputs
+                 outputs=[gallery, status_message, selected_info, selected_showbag_id_state, vote_confirm_message, top_result_id_state, last_search_ids_state, shortlist_display]) 
 
     return app
 
