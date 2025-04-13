@@ -50,10 +50,9 @@ The initial prototype version of the application. Didn't do too well with the ra
 
 ### v1
 The improved version with enhanced features. 
-```
 
 ## Data Sources
-The project uses data extracted the Easter Show Website
+The project uses data extracted from the Sydney 2025 Easter Show Website: https://www.eastershow.com.au/
 
 ## Analysis
 Exploratory data analysis is performed in the Jupyter notebooks located in the `notebooks/` directory. These notebooks provide insights into the patterns and trends within the show data.
