@@ -10,6 +10,9 @@ from dotenv import load_dotenv
 import os
 import json
 from typing import List, Dict, Any
+import sqlite3  # Add sqlite3 import
+from datetime import datetime  # Add datetime import
+import uuid  # Add uuid import
 
 # Load environment variables from .env file (searching up the folder structure)
 def find_dotenv_path():
@@ -26,6 +29,29 @@ if env_path:
     load_dotenv(dotenv_path=env_path)
 else:
     load_dotenv()  # Try to load from the current directory as a fallback
+
+# Database setup
+DB_FILE = "showbag_logs.db"
+
+def init_db():
+    """Initialize the SQLite database and create the interactions table if it doesn't exist."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS interactions (
+                     id TEXT PRIMARY KEY,
+                     timestamp TEXT,
+                     user_query TEXT,
+                     retrieved_context TEXT,  -- Store as JSON string
+                     final_response TEXT
+                 )''')
+        conn.commit()
+        conn.close()
+        print(f"Database initialized successfully at {DB_FILE}")
+    except Exception as e:
+        print(f"Error initializing database: {e}")
+
+init_db() # Initialize the database when the app starts
 
 # Initialize OpenAI embedding model with API key
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
@@ -93,6 +119,20 @@ def load_showbags_index():
         print(f"Error loading showbags data: {str(e)}")
         return None
 
+def log_interaction(user_query: str, retrieved_context: str, final_response: str):
+    """Log interaction details to the SQLite database."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        interaction_id = str(uuid.uuid4())
+        timestamp = datetime.now().isoformat()
+        c.execute("INSERT INTO interactions (id, timestamp, user_query, retrieved_context, final_response) VALUES (?, ?, ?, ?, ?)",
+                  (interaction_id, timestamp, user_query, retrieved_context, final_response))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error logging interaction: {e}")
+
 def format_showbag_for_display(node):
     """Format a showbag node for display in the chat interface"""
     metadata = node.metadata or {}
@@ -139,6 +179,20 @@ def query_showbags(query, chat_history=None):
         # Query and get response
         response = query_engine.query(query)
         
+        # Prepare context for logging
+        retrieved_context_data = []
+        if hasattr(response, 'source_nodes') and response.source_nodes:
+            for node_with_score in response.source_nodes:
+                node_info = {
+                    "id": node_with_score.metadata.get('id', ''),
+                    "name": node_with_score.metadata.get('name', ''),
+                    "score": node_with_score.score,
+                    # Optionally add a snippet of text if needed
+                    # "text_snippet": node_with_score.text[:100] + "..."
+                }
+                retrieved_context_data.append(node_info)
+        retrieved_context_json = json.dumps(retrieved_context_data)
+
         # Format the response for display, ensuring uniqueness
         formatted_response = "Here are some Easter showbags that match your query:\n\n"
         displayed_ids = set() # Keep track of displayed showbag IDs
@@ -169,6 +223,12 @@ def query_showbags(query, chat_history=None):
             # Fallback to just the response if no source nodes
             formatted_response += str(response)
         
+        # Log the interaction before returning
+        try:
+            log_interaction(user_query=query, retrieved_context=retrieved_context_json, final_response=formatted_response)
+        except Exception as log_e:
+            print(f"Logging failed: {log_e}") # Prevent logging errors from crashing the main function
+
         return formatted_response
     
     except Exception as e:
