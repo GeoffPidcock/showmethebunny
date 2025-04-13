@@ -1,7 +1,72 @@
 # Show me the bunny
-A royal easter show 2025 chatbot
 
-## Goal
-The easter show website this year has over 400 showbags listed. There is no way for a family to search these listings. This app provides a quick solution to that problem.
+## Overview
+"Show me the bunny" is a simple LLM app for helping kids find and choose their 2025 Sydney Royal Easter Show show-bag. The project contains various experiments, data processing scripts, and analysis notebooks.
 
-more to come.
+## Project Structure
+```
+show-me-the-bunny/
+│
+├── apps/                       # Application experiments
+│   ├── v0/                     # Initial application version, llamaindex
+│   └── v1/                     # Second application version with improvements
+│
+├── data/                       # Raw and processed data files
+│   ├── showbags/               # Showbag-related data and scripts
+│   └── show-guide-2025.pdf     # Show guide
+│
+├── notebooks/                  # Jupyter notebooks for prototyping
+│
+├── scratch/                    # Temporary and experimental code
+│
+├── .env                        # Environment variables (API keys, etc.)
+├── .gitignore                  # Files ignored by git
+├── .python-version             # Python version specification (3.11)
+└── README.md                   # Project documentation (this file)
+```
+
+## Getting Started
+
+### Prerequisites
+- Python 3.11
+- Virtual environment (.venv)
+
+### Installation
+1. Clone the repository
+2. Set up the virtual environment:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+3. Install the required dependencies:
+   ```bash
+   pip install -r apps/v1/requirements.txt
+   ```
+
+## Application Versions
+
+### v0
+The initial prototype version of the application. Didn't do too well with the raw data, so we're going to try enriching using a multi-modal model and the image url's. 
+
+### v1
+The improved version with enhanced features. 
+```
+
+## Data Sources
+The project uses data extracted the Easter Show Website
+
+## Analysis
+Exploratory data analysis is performed in the Jupyter notebooks located in the `notebooks/` directory. These notebooks provide insights into the patterns and trends within the show data.
+
+## Environment Variables
+The project requires various API keys, which are stored in the `.env` file:
+- BASETEN_API_KEY: For accessing Baseten hosted models
+- OPENAI_API_KEY: For accessing OpenAI services
+
+**Note:** Remember to create your own `.env` file with your API keys when setting up the project.
+
+## Contributing
+1. Create a new branch for your feature or fix
+2. Implement your changes
+3. Test thoroughly
+4. Submit a pull request
