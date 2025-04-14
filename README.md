@@ -1,7 +1,11 @@
 # Show me the bunny
 
 ## Overview
-"Show me the bunny" is a simple LLM app for helping kids find and choose their 2025 Sydney Royal Easter Show show-bag. The project contains various experiments, data processing scripts, and analysis notebooks.
+"Show me the bunny" is a simple LLM app for helping kids find and choose their 2025 Sydney Royal Easter Show show-bag. 
+
+You can find the app deployed to modal on this link: [https://bit.ly/easterbagsearch](https://bit.ly/easterbagsearch)
+
+The project contains various experiments, data processing scripts, and analysis notebooks.
 
 ## Project Structure
 ```
@@ -9,7 +13,8 @@ show-me-the-bunny/
 │
 ├── apps/                       # Application experiments
 │   ├── v0/                     # Initial application version, llamaindex
-│   └── v1/                     # Second application version with improvements
+│   └── v1/                     # Second application version, abandoned
+│   └── v2/                     # Third application version, deployed to modal
 │
 ├── data/                       # Raw and processed data files
 │   ├── showbags/               # Showbag-related data and scripts

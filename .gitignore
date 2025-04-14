@@ -3,3 +3,5 @@
 data/showbags/html_pages/
 scratch/
 todo.md
+*.db
+__pycache__/
