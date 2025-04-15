@@ -1,0 +1,11 @@
+gradio==4.26.0
+pandas==2.1.4
+python-dotenv==1.0.1
+pydantic==2.10.6
+fastapi==0.110.0
+starlette==0.36.3
+llama-index-core>=0.10.0,<0.13.0
+llama-index-embeddings-openai>=0.1.0,<0.4.0
+llama-index-llms-openai>=0.1.0,<0.4.0
+openai>=0.28.1,<2.0.0
+pymupdf 

@@ -1,9 +1,15 @@
 # Show me the bunny
 
 ## Overview
-"Show me the bunny" is a simple LLM app for helping kids find and choose their 2025 Sydney Royal Easter Show show-bag. 
+"Show me the bunny" is a simple LLM app for helping parents and kids find and choose their 2025 Sydney Royal Easter Show show-bag. 
+
+What is the royal easter show? A big country fair held in Sydney on the weeks before and after Easter - [link](https://www.eastershow.com.au/)
+
+Credit to the show organisers for uploading all the showbag details to their website. As there was no way to search it, this app was created.
 
 You can find the app deployed to modal on this link: [https://bit.ly/easterbagsearch](https://bit.ly/easterbagsearch)
+
+![Easter Bag Search App Screenshot](./easterbagsearch.png)
 
 The project contains various experiments, data processing scripts, and analysis notebooks.
 
@@ -45,7 +51,7 @@ show-me-the-bunny/
    ```
 3. Install the required dependencies:
    ```bash
-   pip install -r apps/v1/requirements.txt
+   pip install -r apps/v2/requirements.txt
    ```
 
 ## Application Versions
@@ -54,7 +60,10 @@ show-me-the-bunny/
 The initial prototype version of the application. Didn't do too well with the raw data, so we're going to try enriching using a multi-modal model and the image url's. 
 
 ### v1
-The improved version with enhanced features. 
+Abandoned.
+
+### v2
+Ultimately the app that was deployed - uses an image carousel, tries to have some prompts ready, and allows price filtering.
 
 ## Data Sources
 The project uses data extracted from the Sydney 2025 Easter Show Website: https://www.eastershow.com.au/
@@ -72,5 +81,5 @@ The project requires various API keys, which are stored in the `.env` file:
 ## Contributing
 1. Create a new branch for your feature or fix
 2. Implement your changes
-3. Test thoroughly
+3. Test thoroughly (and given this is vibe coding the bar is set low!)
 4. Submit a pull request
