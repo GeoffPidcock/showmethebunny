@@ -13,6 +13,8 @@ You can find the app deployed to modal on this link: [https://bit.ly/easterbagse
 
 The project contains various experiments, data processing scripts, and analysis notebooks.
 
+Lesson learned (based on usage logs): explicitly design for a null retrieval set (the app silently fails and shows all 408 listings; not a good UX!) 
+
 ## Project Structure
 ```
 show-me-the-bunny/
